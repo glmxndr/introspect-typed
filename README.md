@@ -30,9 +30,9 @@ Provides rudimentary type checking and function overloading in Javascript.
 ```javascript
     var matchType = require('introspect-typed').matchType;
     function Custo () { this.type = 'custo'; }
-    var custoMatcher = matchType(String);
-    stringMatcher(new Custo());      // => true
-    stringMatcher({type: 'custo'});  // => false
+    var custoMatcher = matchType(Custo);
+    custoMatcher(new Custo());      // => true
+    custoMatcher({type: 'custo'});  // => false
 ```
 
 ## Type checking: Function calls
