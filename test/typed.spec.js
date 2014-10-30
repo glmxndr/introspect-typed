@@ -8,7 +8,12 @@ var matchType = typed.matchType;
 var typeChecked = typed.typeChecked;
 var overload = typed.overload;
 
+var Any = typed.Any;
+var Either = typed.Either;
+var Matcher = typed.Matcher;
+
 describe('matchType', function () {
+
   it ('should validate correctly for Function', function () {
     var type = Function;
     var typeMatcher = matchType(type);
@@ -21,6 +26,7 @@ describe('matchType', function () {
       expect(matchType(type, tested)).to.be.false;
     });
   });
+
   it ('should validate correctly for String', function () {
     var type = String;
     var typeMatcher = matchType(type);
@@ -33,6 +39,7 @@ describe('matchType', function () {
       expect(matchType(type, tested)).to.be.false;
     });
   });
+
   it ('should validate correctly for Object', function () {
     var type = Object;
     var typeMatcher = matchType(type);
@@ -45,6 +52,7 @@ describe('matchType', function () {
       expect(matchType(type, tested)).to.be.false;
     });
   });
+
   it ('should validate correctly for Array', function () {
     var type = Array;
     var typeMatcher = matchType(type);
@@ -57,6 +65,7 @@ describe('matchType', function () {
       expect(matchType(type, tested)).to.be.false;
     });
   });
+
   it ('should validate correctly for Custom type', function () {
     function Type () {}
     var type = Type;
@@ -66,6 +75,45 @@ describe('matchType', function () {
       expect(matchType(type, tested)).to.be.true;
     });
     [expect, 2, null, undefined, new Date(), /.*/, {}, arguments].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.false;
+      expect(matchType(type, tested)).to.be.false;
+    });
+  });
+
+  it ('should validate correctly for Any', function () {
+    function Type () {}
+    var type = Any;
+    var typeMatcher = matchType(type);
+    [new Type(), expect, 2, null, undefined, new Date(), /.*/, {}, arguments].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.true;
+      expect(matchType(type, tested)).to.be.true;
+    });
+  });
+
+  it ('should validate correctly for Either', function () {
+    function Type () {}
+    var type = Either(Type, Number);
+    var typeMatcher = matchType(type);
+    [new Type(), 2].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.true;
+      expect(matchType(type, tested)).to.be.true;
+    });
+    [expect, null, undefined, new Date(), /.*/, {}, arguments].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.false;
+      expect(matchType(type, tested)).to.be.false;
+    });
+  });
+
+  it ('should validate correctly for Matcher', function () {
+    function Type (v, unused) { this.length = v; }
+    // Type.length === 2 since it takes officially 2 arguments
+    var type = Matcher(function (v) { return v.length === 2; });
+    var typeMatcher = matchType(type);
+    [Type, new Type(2), {length: 2}, '12', [1,2]].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.true;
+      expect(matchType(type, tested)).to.be.true;
+    });
+    [arguments, null, undefined, new Date(), /.*/, {}, '', [1,2,3]].forEach(function (tested) {
       expect(typeMatcher(tested)).to.be.false;
       expect(matchType(type, tested)).to.be.false;
     });
@@ -112,15 +160,40 @@ describe('overload', function(){
 
   describe('a completely overloaded function', function () {
     var fn = overload(function () { return this; })
-      .when([Number], function (a) { return a + 1; })
-      .when([Number, Number], function (n1, n2) { return n1 * n2; })
-      .when([String, String], function (s1, s2) { return s1 + '-' + s2; })
-      .when([String, String, String], function (s1, s2, s3) { return [s1,s2,s3].join('!'); })
-      .when([Number, String], function (n, s) { return s.repeat(n); });
+      .when([Number],
+        function (a) { return a + 1; })
+
+      .when([Number, Number],
+        function (n1, n2) { return n1 * n2; })
+
+      .when([String, String],
+        function (s1, s2) { return s1 + '-' + s2; })
+
+      .when([String, String, String],
+        function (s1, s2, s3) { return [s1,s2,s3].join('!'); })
+
+      .when([Boolean, Either(String,Array)],
+        function (b, v) { return v.length; })
+
+      .when([Any, Any, Any, Any],
+        function () { return arguments[3]; })
+
+      .when([Number, String],
+        function (n, s) { return s.repeat(n); });
 
     it('should correctly detect the argument String/String/String', function(){
       expect(fn('2','57', 'x')).to.be.equal('2!57!x');
     });
+
+    it('should correctly detect the argument Any/Any/Any/Any', function(){
+      expect(fn('?',0,null,'fourth')).to.be.equal('fourth');
+    });
+
+    it('should correctly detect the argument Either(String,Array)', function(){
+      expect(fn(true, '?')).to.be.equal(1);
+      expect(fn(false, [1,2,3,4,5])).to.be.equal(5);
+    });
+
     it('should correctly detect the argument String/String', function(){
       expect(fn('2','57')).to.be.equal('2-57');
     });

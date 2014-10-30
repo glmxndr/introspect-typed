@@ -8,6 +8,8 @@ Provides rudimentary type checking and function overloading in Javascript.
 
 ## Type checking: Individual values
 
+Other methods (`typeChecked`, `overload`) are based on this functionality.
+
 ### Direct match
 
 ```javascript
@@ -35,10 +37,49 @@ Provides rudimentary type checking and function overloading in Javascript.
     custoMatcher({type: 'custo'});  // => false
 ```
 
+### Matching against any type
+
+Use `Typed.Any` if you want to match any value.
+
+```javascript
+    var Typed = require('introspect-typed');
+    var matchType = Typed.matchType;
+    matchType(Typed.Any, undefined); // => true
+```
+
+### Matching against several types
+
+Use `Typed.Either` if you want to match several types.
+
+```javascript
+    var Typed = require('introspect-typed');
+    var matchType = Typed.matchType;
+    matchType(Typed.Either(String, Number), 'string'); // => true
+    matchType(Typed.Either(String, Number), 2);        // => true
+    matchType(Typed.Either(String, Number), {});       // => false
+```
+
+### Matching against a predicate
+
+Use `Typed.Matcher` if you want to match with a predicate.
+
+```javascript
+    var Typed = require('introspect-typed');
+    var matchType = Typed.matchType;
+    var type = Typed.Matcher(function (v) { return v.length === 2; });
+    matchType(type, {length: 2}); // => true
+    matchType(type, '12');        // => true
+    matchType(type, [1,2]);       // => true
+    matchType(type, '1');         // => false
+    matchType(type, [1,2,3]);     // => false
+```
+
 ## Type checking: Function calls
 
 ```javascript
-  var typeChecked = require('introspect-typed').typeChecked;
+  var Typed = require('introspect-typed');
+  var typeChecked = Typed.typeChecked;
+  var Either = Either.typeChecked;
   function Custo () { this.type = 'custo'; }
 ```
 
@@ -47,16 +88,18 @@ Declare a type checked function by calling `typeChecked` with
 - the function you want to type check.
 
 ```javascript
-  var tcFn = typeChecked([String, Custo], function (s, c) {
-    // ...
+  var tcFn = typeChecked([Either(String, Number), Custo], function (s, c) {
+    return s + c;
   });
+  tcFn('string', new Custo()); // => 'string[object Object]'
+  tcFn(Infinity, new Custo()); // => 'Infinity[object Object]'
 ```
 
 By default, the typechecked function throws a `TypeError` when not given
 proper arguments.
 
 ```javascript
-  tcFn('string!', {type:'custo'}); // => throws TypeError
+  tcFn('string', {type:'custo'}); // => throws TypeError
 ```
 
 You can set the error management behaviour yourself (at any time).
@@ -177,6 +220,14 @@ equivalent to `overload(typeChecked(types, fn))`.
     // give 3 strings: join them with '!'
     .when([String, String, String], 
       function (s1, s2, s3) { return [s1,s2,s3].join('!'); })
+
+    // returns the length for a String or an Array
+    .when([Either(String,Array)], 
+      function (v) { return v.length; })
+    
+    // logs arguments when there are 4 of them
+    .when([Any, Any, Any, Any], 
+      function () { console.log(arguments); return arguments[3]; })
     
     // give a number and a string: repeat the string n times
     .when([Number, String], 

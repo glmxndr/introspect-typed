@@ -12,6 +12,27 @@ var typeCheckMap = new Map([
   [ String,   _.isString ]
 ]);
 
+// Matches any value
+var Any = function () { return Any; };
+
+// Allows to type check against several types...
+var Either = function (...args) {
+  if (!(this instanceof Either)) {
+    return new Either(...args);
+  }
+  this.types = args;
+};
+
+// Matches against a predicate function, instead of a type
+var Matcher = function (p) {
+  if (!(this instanceof Matcher)) {
+    return new Matcher(p);
+  }
+  this.predicate = (v) => {
+    try { return !!p(v); }
+    catch(e) { return false; }
+  };
+};
 
 /**
  * Tells if the given type matches the given value.
@@ -24,9 +45,18 @@ var typeCheckMap = new Map([
  */
 var matchType = function (type, val) {
   var returnFn = (arguments.length === 1);
+  var predicate;
   if (typeCheckMap.has(type)) {
     return returnFn ? (val) => typeCheckMap.get(type)(val)
                     : typeCheckMap.get(type)(val);
+  } else if (type === Any) {
+    return returnFn ? (val) => true : true;
+  } else if (type instanceof Either) {
+    predicate = (val) => _(type.types).some( t => matchType(t, val) );
+    return returnFn ? predicate : predicate(val);
+  } else if (type instanceof Matcher) {
+    predicate = type.predicate;
+    return returnFn ? predicate : predicate(val);
   } else if (_.isString(type))  {
     return returnFn ? (val) => typeof val === type
                     : typeof val === type;
@@ -38,9 +68,10 @@ var matchType = function (type, val) {
   }
 };
 
-var matchZipped = function (zipped) {
-  return matchType(...zipped);
-};
+var matchZipped = (zipped) => matchType(...zipped);
+var matchTypes  = (ts, vs) => _(ts).zip(vs).all(matchZipped);
+var matchLength = (ts, vs) => ts.length === vs.length;
+var checkTypes  = (ts, vs) => matchLength(ts, vs) && matchTypes(ts, vs);
 
 /**
  * Enforces a check type on the arguments given to a function.
@@ -60,10 +91,7 @@ var typeChecked = function (types, fn) {
   var onErrorCb = onErrorDefaultCb;
 
   var checkingFn = function (...fnArgs) {
-    var matchLength = () => types.length === fnArgs.length;
-    var matchTypes  = () => _(types).zip(fnArgs).all(matchZipped);
-
-    if (matchLength() && matchTypes()) {
+    if (checkTypes(types, fnArgs)) {
       return fn.apply(this, fnArgs);
     } else {
       var error = new TypeError();
@@ -113,14 +141,11 @@ var overload = function (types, defaultFn) {
   var o = { default: defaultFn };
 
   var destFn = function (...fnArgs) {
-    var matchLength = (when) => when.types.length === fnArgs.length;
-    var matchTypes  = (when) => _(when.types).zip(fnArgs).all(matchZipped);
-
     var done = false;
     var result;
     _.each(whens, (when) => {
       if (done) { return; }
-      if (matchLength(when) && matchTypes(when)) {
+      if (checkTypes(when.types, fnArgs)) {
         done = true;
         result = when.fn.apply(this, fnArgs.concat([o]));
       }
@@ -138,8 +163,7 @@ var overload = function (types, defaultFn) {
   };
 
   destFn.when = function (name, types, fn) {
-    var matchTypes  = (types) => _(types).zip(arguments).all(matchZipped);
-    if (matchTypes([Array, Function])) {
+    if (matchTypes([Array, Function], arguments)) {
       fn = types; types = name; name = null;
     }
     if (name) {
@@ -155,4 +179,4 @@ var overload = function (types, defaultFn) {
 
 };
 
-export { matchType, typeChecked, overload };
+export { Any, Either, Matcher, matchType, typeChecked, overload };
