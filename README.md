@@ -97,7 +97,7 @@ Use `Typed.Matcher` if you want to match with a predicate.
 ```javascript
   var Typed = require('introspect-typed');
   var typeChecked = Typed.typeChecked;
-  var Either = Either.typeChecked;
+  var Either = Typed.Either;
   function Custo () { this.type = 'custo'; }
 ```
 

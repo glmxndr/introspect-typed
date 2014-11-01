@@ -14,6 +14,32 @@ var Matcher = typed.Matcher;
 
 describe('matchType', function () {
 
+  it ('should validate correctly for null', function () {
+    var type = null;
+    var typeMatcher = matchType(type);
+    [null].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.true;
+      expect(matchType(type, tested)).to.be.true;
+    });
+    ['', 2, undefined, new Date(), /.*/, {}, []].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.false;
+      expect(matchType(type, tested)).to.be.false;
+    });
+  });
+
+  it ('should validate correctly for undefined', function () {
+    var type = undefined;
+    var typeMatcher = matchType(type);
+    [undefined].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.true;
+      expect(matchType(type, tested)).to.be.true;
+    });
+    ['', 2, null, new Date(), /.*/, {}, []].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.false;
+      expect(matchType(type, tested)).to.be.false;
+    });
+  });
+
   it ('should validate correctly for Function', function () {
     var type = Function;
     var typeMatcher = matchType(type);
