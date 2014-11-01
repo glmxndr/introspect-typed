@@ -1,6 +1,6 @@
 {
   "name": "introspect-typed",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A small library to provide function type checks functionalities",
 
   "author": "subtenante@gmail.com",
@@ -30,7 +30,8 @@
     "gulp-sourcemaps": "1.2.x",
     "gulp-traceur": "0.x.x",
     "jshint-stylish": "1.x.x",
-    "mocha": "1.x.x"
+    "mocha": "1.x.x",
+    "marked-toc": "^0.2.8"
   },
   "dependencies": {
     "lodash": "2.x.x"

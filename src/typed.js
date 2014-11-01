@@ -63,8 +63,12 @@ var matchType = function (type, val) {
   } else if (_.isFunction(type)) {
     return returnFn ? (val) => val instanceof type
                     : val instanceof type;
-  } else {
-    return false;
+  } else if (type === null || type === undefined) {
+    return returnFn ? (val) => val === type
+                    : val === type;
+  }
+  else {
+    return returnFn ? () => false : false;
   }
 };
 

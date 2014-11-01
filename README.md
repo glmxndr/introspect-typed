@@ -2,11 +2,29 @@
 
 Provides rudimentary type checking and function overloading in Javascript.
 
+<!-- toc -->
+
+* [Install](#install)
+* [`matchType`: Type checking individual values](#matchtype-type-checking-individual-values)
+  * [Direct match](#direct-match)
+  * [Getting a matcher function](#getting-a-matcher-function)
+  * [Custom types work as well](#custom-types-work-as-well)
+  * [Matching against any type](#matching-against-any-type)
+  * [Matching against several types](#matching-against-several-types)
+  * [Matching against a predicate](#matching-against-a-predicate)
+* [`typeChecked`: Type checking function calls](#typechecked-type-checking-function-calls)
+  * [Error management](#error-management)
+* [`overload`: Overloading functions](#overload-overloading-functions)
+  * [Chaining methods](#chaining-methods)
+  * [Complete overloading](#complete-overloading)
+
+<!-- toc stop -->
+
 ## Install
 
     npm install introspect-typed
 
-## Type checking: Individual values
+## `matchType`: Type checking individual values
 
 Other methods (`typeChecked`, `overload`) are based on this functionality.
 
@@ -74,7 +92,7 @@ Use `Typed.Matcher` if you want to match with a predicate.
     matchType(type, [1,2,3]);     // => false
 ```
 
-## Type checking: Function calls
+## `typeChecked`: Type checking function calls
 
 ```javascript
   var Typed = require('introspect-typed');
@@ -94,6 +112,8 @@ Declare a type checked function by calling `typeChecked` with
   tcFn('string', new Custo()); // => 'string[object Object]'
   tcFn(Infinity, new Custo()); // => 'Infinity[object Object]'
 ```
+
+### Error management
 
 By default, the typechecked function throws a `TypeError` when not given
 proper arguments.
@@ -117,7 +137,7 @@ a falsey value.
   tcFn.onError(false);
 ```
 
-## Overloading
+## `overload`: Overloading functions
 
 ### Chaining methods
 
