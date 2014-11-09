@@ -1,8 +1,7 @@
 'use strict';
 import _ from 'lodash';
 
-
-var Typed = function () {
+export var build = function () {
 
   var typeCheckMap = new Map([
     [ Function, _.isFunction ],
@@ -207,10 +206,11 @@ var Typed = function () {
 
 };
 
-var instance = Typed();
+var instance = build();
 
-for (var key in instance) {
-  Typed[key] = instance[key];
-}
-
-export default Typed;
+export var Any = instance.Any;
+export var Either = instance.Either;
+export var Matcher = instance.Matcher;
+export var matchType = instance.matchType;
+export var typeChecked = instance.typeChecked;
+export var overload = instance.overload;

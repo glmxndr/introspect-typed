@@ -3,18 +3,19 @@
 
 var expect = require('chai').expect;
 
-var typed = require('../');
-var matchType = typed.matchType;
-var typeChecked = typed.typeChecked;
-var overload = typed.overload;
+var Typed = require('../');
+var build = Typed.build;
+var matchType = Typed.matchType;
+var typeChecked = Typed.typeChecked;
+var overload = Typed.overload;
 
-var Any = typed.Any;
-var Either = typed.Either;
-var Matcher = typed.Matcher;
+var Any = Typed.Any;
+var Either = Typed.Either;
+var Matcher = Typed.Matcher;
 
-describe('typed', function () {
+describe('build', function () {
   it ('is a function returning a new typed context', function () {
-    var t = typed();
+    var t = build();
     expect(t.Any).to.not.be.undefined;
     expect(t.Either).to.not.be.undefined;
     expect(t.Matcher).to.not.be.undefined;
@@ -25,7 +26,7 @@ describe('typed', function () {
   });
 
   it ('should allow for new type match cases', function () {
-    var t = typed();
+    var t = build();
     var matchType = t.matchType;
 
     var Truthy = {};

@@ -275,18 +275,16 @@ The `this` value is conserved.
     expect(fn.apply(42, [])).to.be.equal(42);
 ```
 
-### `typed`
+### `build`
 
-The imported object retrieved throught `require('introspect-typed')` is
-actually a function. This function, when called, returns a new `typed` object
-with a completely isolated context.
+The `build` function allows to create a new Typed context.
 
 This allows to modify the `matchType` function, to pass more cases to the
 type checking.
 
 ```javascript
-    var typed = require('introspect-typed');
-    var newTypedContext = typed();
+    var build = require('introspect-typed').build;
+    var newTypedContext = build();
     var matchType = newTypedContext.matchType;
 
     var Truthy = {};
