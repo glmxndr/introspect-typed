@@ -12,6 +12,39 @@ var Any = typed.Any;
 var Either = typed.Either;
 var Matcher = typed.Matcher;
 
+describe('typed', function () {
+  it ('is a function returning a new typed context', function () {
+    var t = typed();
+    expect(t.Any).to.not.be.undefined;
+    expect(t.Either).to.not.be.undefined;
+    expect(t.Matcher).to.not.be.undefined;
+    expect(t.matchType).to.be.a('function');
+    expect(t.typeChecked).to.be.a('function');
+    expect(t.overload).to.be.a('function');
+    expect(t.Any).to.not.be.equal(Any);
+  });
+
+  it ('should allow for new type match cases', function () {
+    var t = typed();
+    var matchType = t.matchType;
+
+    var Truthy = {};
+
+    expect(matchType(Truthy, 1)).to.be.false;
+    expect(matchType(Truthy, null)).to.be.false;
+
+    matchType.addTypeMatchCase({
+      case: function (type) { return type === Truthy; },
+      match: function (type) { return function (val) { return !!val }; }
+    });
+
+    expect(matchType(Truthy, 1)).to.be.true;
+    expect(matchType(Truthy, null)).to.be.false;
+
+  });
+
+});
+
 describe('matchType', function () {
 
   it ('should validate correctly for null', function () {

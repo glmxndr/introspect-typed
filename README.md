@@ -5,18 +5,20 @@ Provides rudimentary type checking and function overloading in Javascript.
 <!-- toc -->
 
 * [Install](#install)
-* [`matchType`: Type checking individual values](#matchtype-type-checking-individual-values)
-  * [Direct match](#direct-match)
-  * [Getting a matcher function](#getting-a-matcher-function)
-  * [Custom types work as well](#custom-types-work-as-well)
-  * [Matching against any type](#matching-against-any-type)
-  * [Matching against several types](#matching-against-several-types)
-  * [Matching against a predicate](#matching-against-a-predicate)
-* [`typeChecked`: Type checking function calls](#typechecked-type-checking-function-calls)
-  * [Error management](#error-management)
-* [`overload`: Overloading functions](#overload-overloading-functions)
-  * [Chaining methods](#chaining-methods)
-  * [Complete overloading](#complete-overloading)
+* [API](#api)
+  * [`matchType`: Type checking individual values](#matchtype-type-checking-individual-values)
+    * [Direct match](#direct-match)
+    * [Getting a matcher function](#getting-a-matcher-function)
+    * [Custom types work as well](#custom-types-work-as-well)
+    * [Matching against any type](#matching-against-any-type)
+    * [Matching against several types](#matching-against-several-types)
+    * [Matching against a predicate](#matching-against-a-predicate)
+  * [`typeChecked`: Type checking function calls](#typechecked-type-checking-function-calls)
+    * [Error management](#error-management)
+  * [`overload`: Overloading functions](#overload-overloading-functions)
+    * [Chaining methods](#chaining-methods)
+    * [Complete overloading](#complete-overloading)
+  * [`typed`](#typed)
 
 <!-- toc stop -->
 
@@ -24,11 +26,13 @@ Provides rudimentary type checking and function overloading in Javascript.
 
     npm install introspect-typed
 
-## `matchType`: Type checking individual values
+## API
+
+### `matchType`: Type checking individual values
 
 Other methods (`typeChecked`, `overload`) are based on this functionality.
 
-### Direct match
+#### Direct match
 
 ```javascript
     var matchType = require('introspect-typed').matchType;
@@ -36,7 +40,7 @@ Other methods (`typeChecked`, `overload`) are based on this functionality.
     matchType(Number, 'no...'); // => false
 ```
 
-### Getting a matcher function
+#### Getting a matcher function
 
 ```javascript
     var matchType = require('introspect-typed').matchType;
@@ -45,7 +49,7 @@ Other methods (`typeChecked`, `overload`) are based on this functionality.
     stringMatcher(22.145);  // => false
 ```
 
-### Custom types work as well
+#### Custom types work as well
 
 ```javascript
     var matchType = require('introspect-typed').matchType;
@@ -55,7 +59,7 @@ Other methods (`typeChecked`, `overload`) are based on this functionality.
     custoMatcher({type: 'custo'});  // => false
 ```
 
-### Matching against any type
+#### Matching against any type
 
 Use `Typed.Any` if you want to match any value.
 
@@ -65,7 +69,7 @@ Use `Typed.Any` if you want to match any value.
     matchType(Typed.Any, undefined); // => true
 ```
 
-### Matching against several types
+#### Matching against several types
 
 Use `Typed.Either` if you want to match several types.
 
@@ -77,7 +81,7 @@ Use `Typed.Either` if you want to match several types.
     matchType(Typed.Either(String, Number), {});       // => false
 ```
 
-### Matching against a predicate
+#### Matching against a predicate
 
 Use `Typed.Matcher` if you want to match with a predicate.
 
@@ -92,7 +96,7 @@ Use `Typed.Matcher` if you want to match with a predicate.
     matchType(type, [1,2,3]);     // => false
 ```
 
-## `typeChecked`: Type checking function calls
+### `typeChecked`: Type checking function calls
 
 ```javascript
   var Typed = require('introspect-typed');
@@ -113,7 +117,7 @@ Declare a type checked function by calling `typeChecked` with
   tcFn(Infinity, new Custo()); // => 'Infinity[object Object]'
 ```
 
-### Error management
+#### Error management
 
 By default, the typechecked function throws a `TypeError` when not given
 proper arguments.
@@ -137,9 +141,9 @@ a falsey value.
   tcFn.onError(false);
 ```
 
-## `overload`: Overloading functions
+### `overload`: Overloading functions
 
-### Chaining methods
+#### Chaining methods
 
 When creating an API, we often want our methods to accept different kinds 
 of inputs, but the code that results from these checks is ugly and provides
@@ -218,7 +222,7 @@ To have a completely type checked method, one could do this instead:
 The calls to `overload` with arguments matching `[Array, Function]` are 
 equivalent to `overload(typeChecked(types, fn))`.
 
-### Complete overloading
+#### Complete overloading
 
 ```javascript
   var overload = require('introspect-typed').overload;
@@ -269,4 +273,32 @@ The `this` value is conserved.
 
 ```javascript
     expect(fn.apply(42, [])).to.be.equal(42);
+```
+
+### `typed`
+
+The imported object retrieved throught `require('introspect-typed')` is
+actually a function. This function, when called, returns a new `typed` object
+with a completely isolated context.
+
+This allows to modify the `matchType` function, to pass more cases to the
+type checking.
+
+```javascript
+    var typed = require('introspect-typed');
+    var newTypedContext = typed();
+    var matchType = newTypedContext.matchType;
+
+    var Truthy = {};
+
+    expect(matchType(Truthy, 1)).to.be.false;
+    expect(matchType(Truthy, null)).to.be.false;
+
+    matchType.addTypeMatchCase({
+      case: function (type) { return type === Truthy; },
+      match: function (type) { return function (val) { return !!val }; }
+    });
+
+    expect(matchType(Truthy, 1)).to.be.true;
+    expect(matchType(Truthy, null)).to.be.false;
 ```

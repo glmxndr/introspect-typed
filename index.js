@@ -2,4 +2,4 @@
 
 require('./etc/traceur-runtime');
 
-module.exports = require('./lib/node/typed');
+module.exports = require('./lib/node/typed').default;
