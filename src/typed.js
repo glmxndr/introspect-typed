@@ -38,31 +38,26 @@ var Typed = function () {
   };
 
   var typeMatchCases = [{
-    case: (type) => typeCheckMap.has(type),
-    match: (type, val) =>
-      ((val) => typeCheckMap.get(type)(val))
+    case:  (type) => typeCheckMap.has(type),
+    match: (type) => ((val) => typeCheckMap.get(type)(val))
   },{
-    case: (type) => type === Any,
-    match: () => (() => true)
+    case:  (type) => type === Any,
+    match: ()     => (() => true)
   },{
-    case: (type) => type instanceof Either,
-    match: (type, val) =>
-      ((val) => (type.types).some( t => matchType(t, val) ))
+    case:  (type) => type instanceof Either,
+    match: (type) => ((val) => (type.types).some( t => matchType(t, val) ))
   },{
-    case: (type) => type instanceof Matcher,
+    case:  (type) => type instanceof Matcher,
     match: (type) => type.predicate
   },{
-    case: (type) => _.isString(type),
-    match: (type, val) =>
-      ((val) => typeof val === type)
+    case:  (type) => _.isString(type),
+    match: (type) => ((val) => typeof val === type)
   },{
-    case: (type) => _.isFunction(type),
-    match: (type, val) =>
-      ((val) => val instanceof type)
+    case:  (type) => _.isFunction(type),
+    match: (type) => ((val) => val instanceof type)
   },{
-    case: (type) => type === null || type === undefined,
-    match: (type, val) =>
-      ((val) => val === type)
+    case:  (type) => type === null || type === undefined,
+    match: (type) => ((val) => val === type)
   }];
 
   /**
