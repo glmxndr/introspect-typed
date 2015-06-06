@@ -211,20 +211,20 @@ Instead, using `overload`, one can do the following:
       return obj;
     }
   )
-  .when('withName', // Here we define a 'withName' method in the overloading object
+  .when('withName', // Here we define a 'withName' method in the overloaded method
              [String, Object], // which matches calls with a String and an Object
-    function (name,   obj,     o) // the last arg is the overloading object
+    function (name,   obj)
     {
       obj.name = name;
-      // We can use the overloading object to call other methods defined
+      // We can use the overloaded method named parameters to call other methods defined
       // for example the default method, passed to overload
       return createObj.default(obj);
     }
   )
 
-  .when([String, String, Object], function (name, desc, obj, o) {
+  .when([String, String, Object], function (name, desc, obj) {
     obj.desc = desc;
-    // Or we can use it to call named overloading methods.
+    // Or we can use it to call named overloaded methods.
     return createObj.withName(name, obj);
   });
 ```
@@ -237,10 +237,10 @@ Without the comments:
   var createObj = overload(function (obj) {
     obj.test = 1;
     return obj;
-  }).when('withName', [String, Object], function (name, obj, o) {
+  }).when('withName', [String, Object], function (name, obj) {
     obj.name = name;
     return createObj.default(obj);
-  }).when([String, String, Object], function (name, desc, obj, o) {
+  }).when([String, String, Object], function (name, desc, obj) {
     obj.desc = desc;
     return createObj.withName(name, obj);
   });
@@ -258,11 +258,11 @@ To have a completely type checked method, one could do this instead:
     obj.test = 1;
     return obj;
   })
-  .when([String, Object], function (name, obj, o) {
+  .when([String, Object], function (name, obj) {
     obj.name = name;
     return createObj(obj);
   })
-  .when([String, String, Object], function (name, desc, obj, o) {
+  .when([String, String, Object], function (name, desc, obj) {
     obj.desc = desc;
     return createObj(name, obj);
   });
