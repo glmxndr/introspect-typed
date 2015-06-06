@@ -111,7 +111,7 @@ Use `Typed.Iterable` if you want to match es6 iterables.
     var Iterable = Typed.Iterable;
     matchType(Iterable, []);    // => true
     matchType(Iterable, '12');  // => true
-    matchType(Iterable, {});    // => true
+    matchType(Iterable, {});    // => false
     matchType(Iterable, 2);     // => false
     matchType(Iterable, null);  // => false
 ```
