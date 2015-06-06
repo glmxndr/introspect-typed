@@ -13,12 +13,14 @@ Provides rudimentary type checking and function overloading in Javascript.
     * [Matching against any type](#matching-against-any-type)
     * [Matching against several types](#matching-against-several-types)
     * [Matching against a predicate](#matching-against-a-predicate)
+    * [Matching against an ES6 iterable](#matching-against-an-es6-iterable)
   * [`typeChecked`: Type checking function calls](#typechecked-type-checking-function-calls)
+    * [Rest parameters](#rest-parameters)
     * [Error management](#error-management)
   * [`overload`: Overloading functions](#overload-overloading-functions)
     * [Chaining methods](#chaining-methods)
     * [Complete overloading](#complete-overloading)
-  * [`typed`](#typed)
+  * [`build`](#build)
 
 <!-- toc stop -->
 
@@ -96,6 +98,24 @@ Use `Typed.Matcher` if you want to match with a predicate.
     matchType(type, [1,2,3]);     // => false
 ```
 
+#### Matching against an ES6 iterable
+
+Iterables are objects with a `Symbol.iterator` property containing a function.
+In ES6, strings, arrays, sets, maps and generator functions, among others, are
+iterables.
+
+Use `Typed.Iterable` if you want to match es6 iterables.
+
+```javascript
+    var Typed = require('introspect-typed');
+    var Iterable = Typed.Iterable;
+    matchType(Iterable, []);    // => true
+    matchType(Iterable, '12');  // => true
+    matchType(Iterable, {});    // => true
+    matchType(Iterable, 2);     // => false
+    matchType(Iterable, null);  // => false
+```
+
 ### `typeChecked`: Type checking function calls
 
 ```javascript
@@ -117,6 +137,35 @@ Declare a type checked function by calling `typeChecked` with
   tcFn(Infinity, new Custo()); // => 'Infinity[object Object]'
 ```
 
+#### Rest parameters
+
+Check type for rest parameters by using `Typed.Rest`. In ES6:
+
+```javascript
+var Rest = Typed.Rest;
+var typedFn = typeChecked([String, Number, Rest(Either(Custom, String))],
+  (s, n, ...cs) => ({ result: s.repeat(n), rest: cs.length });
+```
+
+In ES5:
+
+```javascript
+  var Rest = Typed.Rest;
+  var typedFn = typeChecked([String, Number, Rest(Either(Custom, String))],
+    function (s, n) {
+      var cs = [].slice.call(arguments, 2);
+      return { result: s.repeat(n), rest: cs.length };
+    });
+```
+
+* `Rest(String)` will match all strings at the end of the arguments.
+* `Rest(Any)` will match anything at the end of the arguments.
+* `Rest(Either(X,Y))` will match any number of `X`s and `Y`s at
+  the end of the arguments.
+
+Note that `Rest(...)` _must_ be the last element in the type array, otherwise
+an error will be thrown while matching.
+
 #### Error management
 
 By default, the typechecked function throws a `TypeError` when not given
@@ -134,7 +183,7 @@ You can set the error management behaviour yourself (at any time).
   });
 ```
 
-And set back the original throwing behaviour by calling `onError` with 
+And set back the original throwing behaviour by calling `onError` with
 a falsey value.
 
 ```javascript
@@ -145,7 +194,7 @@ a falsey value.
 
 #### Chaining methods
 
-When creating an API, we often want our methods to accept different kinds 
+When creating an API, we often want our methods to accept different kinds
 of inputs, but the code that results from these checks is ugly and provides
 many occasions for bugs.
 
@@ -155,7 +204,7 @@ Instead, using `overload`, one can do the following:
   var overload = require('introspect-typed').overload;
 
   var createObj = overload(
-    // This method is the default method, called when no other case 
+    // This method is the default method, called when no other case
     // has matched
     function (obj) {
       obj.test = 1;
@@ -167,16 +216,16 @@ Instead, using `overload`, one can do the following:
     function (name,   obj,     o) // the last arg is the overloading object
     {
       obj.name = name;
-      // We can use the overloading object to call other methods defined 
+      // We can use the overloading object to call other methods defined
       // for example the default method, passed to overload
-      return o.default(obj);
+      return createObj.default(obj);
     }
   )
 
   .when([String, String, Object], function (name, desc, obj, o) {
     obj.desc = desc;
     // Or we can use it to call named overloading methods.
-    return o.withName(name, obj);
+    return createObj.withName(name, obj);
   });
 ```
 
@@ -190,14 +239,14 @@ Without the comments:
     return obj;
   }).when('withName', [String, Object], function (name, obj, o) {
     obj.name = name;
-    return o.default(obj);
+    return createObj.default(obj);
   }).when([String, String, Object], function (name, desc, obj, o) {
     obj.desc = desc;
-    return o.withName(name, obj);
+    return createObj.withName(name, obj);
   });
 ```
 
-Calling a named overloading method directly bypasses the type check.
+Calling a named overloaded method directly bypasses the type check.
 
 To have a completely type checked method, one could do this instead:
 
@@ -219,7 +268,7 @@ To have a completely type checked method, one could do this instead:
   });
 ```
 
-The calls to `overload` with arguments matching `[Array, Function]` are 
+The calls to `overload` with arguments matching `[Array, Function]` are
 equivalent to `overload(typeChecked(types, fn))`.
 
 #### Complete overloading
@@ -228,33 +277,33 @@ equivalent to `overload(typeChecked(types, fn))`.
   var overload = require('introspect-typed').overload;
 
   var fn = overload(function () { return this; })
-    
+
     // give a number : increments it
-    .when([Number], 
+    .when([Number],
       function (a) { return a + 1; })
 
     // give two numbers : multiply them
-    .when([Number, Number], 
+    .when([Number, Number],
       function (n1, n2) { return n1 * n2; })
-    
+
     // give two strings: join them with '-'
-    .when([String, String], 
+    .when([String, String],
       function (s1, s2) { return s1 + '-' + s2; })
-    
+
     // give 3 strings: join them with '!'
-    .when([String, String, String], 
+    .when([String, String, String],
       function (s1, s2, s3) { return [s1,s2,s3].join('!'); })
 
     // returns the length for a String or an Array
-    .when([Either(String,Array)], 
+    .when([Either(String,Array)],
       function (v) { return v.length; })
-    
+
     // logs arguments when there are 4 of them
-    .when([Any, Any, Any, Any], 
+    .when([Any, Any, Any, Any],
       function () { console.log(arguments); return arguments[3]; })
-    
+
     // give a number and a string: repeat the string n times
-    .when([Number, String], 
+    .when([Number, String],
       function (n, s) { return s.repeat(n); });
 ```
 

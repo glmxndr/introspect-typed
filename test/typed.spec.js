@@ -12,6 +12,8 @@ var overload = Typed.overload;
 var Any = Typed.Any;
 var Either = Typed.Either;
 var Matcher = Typed.Matcher;
+var Rest = Typed.Rest;
+var Iterable = Typed.Iterable;
 
 describe('build', function () {
   it ('is a function returning a new typed context', function () {
@@ -23,6 +25,8 @@ describe('build', function () {
     expect(t.typeChecked).to.be.a('function');
     expect(t.overload).to.be.a('function');
     expect(t.Any).to.not.be.equal(Any);
+    expect(t.Rest).to.not.be.equal(Rest);
+    expect(t.Iterable).to.not.be.equal(Iterable);
   });
 
   it ('should allow for new type match cases', function () {
@@ -179,22 +183,43 @@ describe('matchType', function () {
     });
   });
 
+  it ('should validate correctly for Iterable', function () {
+    var type = Iterable;
+    var typeMatcher = matchType(type);
+    var iter = {}; iter[Symbol.iterator] = function () {};
+    [[], new Set(), new Map(), iter, ''].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.true;
+      expect(matchType(type, tested)).to.be.true;
+    });
+    var noiter = {}; noiter[Symbol.iterator] = true;
+    [expect, 2, null, undefined, {}, new Date(), /.*/, arguments, noiter].forEach(function (tested) {
+      expect(typeMatcher(tested)).to.be.false;
+      expect(matchType(type, tested)).to.be.false;
+    });
+  });
+
 });
 
 describe('typeChecked', function () {
   function Custom () { this.type = 'custo'; }
 
-  var typedFn = typeChecked([String, Number, Custom], function (s, n, c) {
-    c.result = s.repeat(n);
-    return c;
+  var typedFn = typeChecked([String, Number, Rest(Custom)], function (s, n) {
+    var cs = [].slice.call(arguments, 2);
+    return { result: s.repeat(n), rest: cs.length };
   });
 
   var testFn = function () { return typedFn('incorrect', 'types'); };
 
   it('should work correctly when given correct types', function () {
-    var result = typedFn('ab', 3, new Custom());
-    expect(result.type).to.be.equal('custo');
-    expect(result.result).to.be.equal('ababab');
+    var result0 = typedFn('ab', 1);
+    expect(result0.rest).to.be.equal(0);
+    expect(result0.result).to.be.equal('ab');
+    var result1 = typedFn('ab', 3, new Custom());
+    expect(result1.rest).to.be.equal(1);
+    expect(result1.result).to.be.equal('ababab');
+    var result2 = typedFn('ab', 2, new Custom(), new Custom());
+    expect(result2.rest).to.be.equal(2);
+    expect(result2.result).to.be.equal('abab');
   });
   it('should throw a TypeError by default on error', function () {
     expect(testFn).to.throw(TypeError);
@@ -235,6 +260,12 @@ describe('overload', function(){
       .when([Boolean, Either(String,Array)],
         function (b, v) { return v.length; })
 
+      .when([Array, Rest(Either(String, Number))],
+        function (arr) {
+          var args = [].slice.call(arguments, 1);
+          return arr.concat(args);
+        })
+
       .when([Any, Any, Any, Any],
         function () { return arguments[3]; })
 
@@ -249,23 +280,32 @@ describe('overload', function(){
       expect(fn('?',0,null,'fourth')).to.be.equal('fourth');
     });
 
-    it('should correctly detect the argument Either(String,Array)', function(){
+    it('should correctly detect the argument Boolean/Either(String,Array)', function(){
       expect(fn(true, '?')).to.be.equal(1);
       expect(fn(false, [1,2,3,4,5])).to.be.equal(5);
+    });
+
+    it('should correctly detect the arguments Array/Rest', function(){
+      expect(fn([0], 1, 2, '3', '4')).to.deep.equal([0, 1, 2, '3', '4']);
+      expect(fn([], 0)).to.deep.equal([0]);
     });
 
     it('should correctly detect the argument String/String', function(){
       expect(fn('2','57')).to.be.equal('2-57');
     });
+
     it('should correctly detect the argument Number/String', function(){
       expect(fn(2,'57')).to.be.equal('5757');
     });
+
     it('should correctly detect the argument Number/Number', function(){
       expect(fn(2,57)).to.be.equal(2*57);
     });
+
     it('should correctly detect the argument Number', function(){
       expect(fn(42)).to.be.equal(43);
     });
+
     it('should correctly return the "this" value', function(){
       expect(fn.apply(42, [])).to.be.equal(42);
     });
@@ -273,39 +313,39 @@ describe('overload', function(){
 
   describe('a partially overloaded untyped function', function () {
     var createObj = overload(function (obj) {
-      obj.test = 1;
+      obj.one = 1;
       return obj;
     }).when('withName', [String, Object], function (name, obj, o) {
       obj.name = name;
-      return o.default(obj);
+      return createObj.default(obj);
     }).when([String, String, Object], function (name, desc, obj, o) {
       obj.desc = desc;
-      return o.withName(name, obj);
+      return createObj.withName(name, obj);
     });
 
     it('should correctly overload with String/String/Object', function(){
       var result = createObj('great', 'a fancy obj', {inner: 1});
-      expect(result.test).to.be.equal(1);
+      expect(result.one).to.be.equal(1);
       expect(result.inner).to.be.equal(1);
       expect(result.name).to.be.equal('great');
       expect(result.desc).to.be.equal('a fancy obj');
     });
     it('should correctly overload with String/Object', function(){
       var result = createObj('great', {inner: 2});
-      expect(result.test).to.be.equal(1);
+      expect(result.one).to.be.equal(1);
       expect(result.inner).to.be.equal(2);
       expect(result.name).to.be.equal('great');
       expect(result.desc).to.be.equal(undefined);
     });
     it('should correctly call the default function', function(){
       var result = createObj({inner: 3});
-      expect(result.test).to.be.equal(1);
+      expect(result.one).to.be.equal(1);
       expect(result.inner).to.be.equal(3);
       expect(result.name).to.be.equal(undefined);
       expect(result.desc).to.be.equal(undefined);
     });
     it('should not throw when calling with wrong signature', function(){
-      var testFn = function () { return createObj(2); };
+      var testFn = function () { return createObj([]); };
       expect(testFn).not.to.throw(TypeError);
     });
   });

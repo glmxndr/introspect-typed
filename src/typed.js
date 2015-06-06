@@ -19,10 +19,14 @@ export var build = function () {
 
   // Allows to type check against several types...
   var Either = function (...args) {
-    if (!(this instanceof Either)) {
-      return new Either(...args);
-    }
+    if (!(this instanceof Either)) { return new Either(...args); }
     this.types = args;
+  };
+
+  // Allows to check varargs (all the remaining args) against the given type def
+  var Rest = function (type) {
+    if (!(this instanceof Rest)) { return new Rest(type); }
+    this.type = type;
   };
 
   // Matches against a predicate function, instead of a type
@@ -72,7 +76,7 @@ export var build = function () {
     var returnFn = (arguments.length === 1);
 
     var matcherFn = typeMatchCases.reduce((found, tmc) => {
-      return found ? found : tmc.case(type) ? tmc.match(type, val) : null;
+      return found || (tmc.case(type) ? tmc.match(type, val) : null);
     }, null);
 
     if (matcherFn === null) { return returnFn ? () => false : false; }
@@ -93,8 +97,17 @@ export var build = function () {
 
   var matchZipped = (zipped) => matchType(...zipped);
   var matchTypes  = (ts, vs) => _(ts).zip(vs).all(matchZipped);
-  var matchLength = (ts, vs) => ts.length === vs.length;
-  var checkTypes  = (ts, vs) => matchLength(ts, vs) && matchTypes(ts, vs);
+  var checkTypes  = (ts, vs) => {
+    if (ts.length === 0) { return vs.length === 0; }
+    var t = ts[0];    ts = _.clone(ts);
+    if (t instanceof Rest) {
+      if (ts.length > 1) { throw 'Wrong type signature: nothing should follow Rest'; }
+      return vs.every(matchType(t.type));
+    }
+    else if (vs.length === 0) { return false; }
+    else { return matchType(t, vs[0]) && checkTypes(_.rest(ts), _.rest(vs)); }
+  };
+  //matchLength(ts, vs) && matchTypes(ts, vs);
 
   /**
    * Enforces a check type on the arguments given to a function.
@@ -139,6 +152,8 @@ export var build = function () {
 
   };
 
+  var isLastTypeRest = (types) => _.last(types) instanceof Rest;
+
   /**
    * Allows to overload a function with other behaviours depending on the
    * types of the arguments passed to the function.
@@ -161,8 +176,6 @@ export var build = function () {
 
     var whens = [];
 
-    var o = { default: defaultFn };
-
     var destFn = function (...fnArgs) {
       var done = false;
       var result;
@@ -170,7 +183,7 @@ export var build = function () {
         if (done) { return; }
         if (checkTypes(when.types, fnArgs)) {
           done = true;
-          result = when.fn.apply(this, fnArgs.concat([o]));
+          result = when.fn.apply(this, fnArgs);
         }
       });
 
@@ -185,13 +198,15 @@ export var build = function () {
       return result;
     };
 
+    destFn.default = defaultFn;
+
     destFn.when = function (name, types, fn) {
       if (matchTypes([Array, Function], arguments)) {
         fn = types; types = name; name = null;
       }
       if (name) {
-        o[name] = function (...args) {
-          return fn.apply(this, args.concat([o]));
+        destFn[name] = function (...args) {
+          return fn.apply(this, args);
         };
       }
       whens.push({types, fn});
@@ -202,7 +217,9 @@ export var build = function () {
 
   };
 
-  return { Any, Either, Matcher, matchType, typeChecked, overload };
+  var Iterable = Matcher(v => (_.isFunction(v[Symbol.iterator])));
+
+  return { Any, Either, Rest, Iterable, Matcher, matchType, typeChecked, overload };
 
 };
 
@@ -210,6 +227,8 @@ var instance = build();
 
 export var Any = instance.Any;
 export var Either = instance.Either;
+export var Rest = instance.Rest;
+export var Iterable = instance.Iterable;
 export var Matcher = instance.Matcher;
 export var matchType = instance.matchType;
 export var typeChecked = instance.typeChecked;
